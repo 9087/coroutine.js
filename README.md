@@ -73,6 +73,21 @@ new Coroutine(function*()
 
 ```
 
+Return result in Coroutine:
+
+```javascript
+new Coroutine(function*()
+{
+  var [hello] = yield new Coroutine(function*()
+  {
+    yield new Return("Hello, coroutine.js!");
+  }
+  ());
+  console.log(hello);
+}
+()).Start();
+```
+
 # Yieldable Items
 
 Default yieldable items are listed below:
@@ -83,5 +98,6 @@ Default yieldable items are listed below:
 - WaitForSeconds
 - Wait
 - Promise
+- Return
 
 Customize more YieldInstruction subclasses to support whatever you need. :)

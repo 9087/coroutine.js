@@ -90,6 +90,12 @@ class YieldInstruction
     }
   }
 
+  Return(...args)
+  {
+    this.argumentsQueue.push(args);
+    this.End();
+  }
+
   Throw(error)
   {
     this.Interrupt(error);
@@ -122,12 +128,11 @@ function Callback()
 {
   function callback(...args)
   {
-    callback.yieldInstruction.argumentsQueue.push(args);
     if (callback.yieldInstruction.done)
     {
       callback.yieldInstruction.Throw(new Error("Multiple-call Callback object is unsupported."))
     }
-    callback.yieldInstruction.End();
+    callback.yieldInstruction.Return(...args);
     return callback;
   }
   callback.yieldInstruction = new YieldInstruction();
@@ -136,6 +141,16 @@ function Callback()
 }
 
 Callback.prototype = Object.create(Function.prototype);
+
+class Return extends YieldInstruction
+{
+  constructor(...args)
+  {
+    super();
+    this.args = args;
+    this.End();
+  }
+}
 
 class PromiseYieldInstruction extends YieldInstruction
 {
@@ -147,7 +162,11 @@ class PromiseYieldInstruction extends YieldInstruction
 
   OnStarted()
   {
-    this.promise.then(() => this.End()).catch((error) => this.Throw(error));
+    this.promise.then((...args) =>
+    {
+      this.Return(...args);
+    }
+    ).catch((error) => this.Throw(error));
   }
 }
 
@@ -170,6 +189,11 @@ class Coroutine extends YieldInstruction
       var yieldInstruction = ConvertToYieldInstruction(value);
       if (yieldInstruction != null)
       {
+        if (yieldInstruction instanceof Return)
+        {
+          this.Return(...yieldInstruction.args);
+          return;
+        }
         this.callee = yieldInstruction;
       }
       else
@@ -239,8 +263,7 @@ class Wait extends YieldInstruction
     else
     {
       clearTimeout(this.timer);
-      this.argumentsQueue.push(this.yieldInstruction.argumentsQueue[0]);
-      this.End();
+      this.Return(...this.yieldInstruction.argumentsQueue[0]);
     }
   }
 
@@ -252,5 +275,5 @@ class Wait extends YieldInstruction
 
 module.exports =
 {
-  Coroutine, YieldInstruction, WaitForSeconds, Callback, Wait,
+  Coroutine, YieldInstruction, WaitForSeconds, Callback, Wait, Return,
 }
